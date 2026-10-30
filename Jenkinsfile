@@ -156,11 +156,11 @@ if (\$LASTEXITCODE -ne 0) {
                                 k6 version
                                 python_command="\${PYTHON:-python3}"
                                 "\$python_command" -m http.server 8000 --directory app --bind 127.0.0.1 >/dev/null 2>&1 &
-                                server_pid=\\$!
+                                server_pid=\$!
                                 trap 'kill "\\$server_pid" 2>/dev/null || true' EXIT
 
                                 ready=0
-                                for attempt in \\$(seq 1 30); do
+                                for attempt in \$(seq 1 30); do
                                     if ! kill -0 "\\$server_pid" 2>/dev/null; then
                                         echo 'El servidor estático terminó antes de responder.' >&2
                                         exit 1

@@ -1,3 +1,5 @@
 __pycache__/
 *.py[cod]
 reports/
+k6/results/
+unit_tests/node_modules/

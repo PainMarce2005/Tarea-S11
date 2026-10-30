@@ -26,24 +26,45 @@ pipeline {
                         sh '''
                             set -eu
                             python_command="${PYTHON:-python3}"
+                            if [ -z "${PYTHON:-}" ] && ! command -v "$python_command" >/dev/null 2>&1; then
+                                python_command=python
+                            fi
+                            if ! command -v "$python_command" >/dev/null 2>&1; then
+                                echo 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.' >&2
+                                exit 1
+                            fi
                             "$python_command" -c "from pathlib import Path; import shutil; [shutil.rmtree(p) for p in ('reports/unittest', 'reports/behave') if Path(p).exists()]"
                             "$python_command" -m pip install -r requirements.txt
                             "$python_command" -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('reports/unittest', 'reports/behave')]"
                         '''
                     } else {
                         powershell '''
-                            $python = if ($env:PYTHON -and $env:PYTHON.Trim()) {
-                                $env:PYTHON
+                            $pythonArgs = @()
+                            if ($env:PYTHON -and $env:PYTHON.Trim()) {
+                                $pythonCommand = Get-Command -Name $env:PYTHON -CommandType Application -ErrorAction SilentlyContinue
                             } else {
-                                'python'
+                                foreach ($candidate in @('py', 'python3', 'python')) {
+                                    $pythonCommand = Get-Command -Name $candidate -CommandType Application -ErrorAction SilentlyContinue
+                                    if ($pythonCommand) {
+                                        if ($candidate -eq 'py') {
+                                            $pythonArgs = @('-3')
+                                        }
+                                        break
+                                    }
+                                }
                             }
+                            if (-not $pythonCommand) {
+                                throw 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.'
+                            }
+                            $python = $pythonCommand.Source
                             $generatedPaths = @('reports/unittest', 'reports/behave')
                             foreach ($path in $generatedPaths) {
                                 if (Test-Path $path) {
                                     Remove-Item -Path $path -Recurse -Force
                                 }
                             }
-                            & $python -m pip install -r requirements.txt
+                            $pythonInvocationArgs = @($pythonArgs) + @('-m', 'pip', 'install', '-r', 'requirements.txt')
+                            & $python @pythonInvocationArgs
                             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                             New-Item -ItemType Directory -Force -Path $generatedPaths | Out-Null
                         '''
@@ -59,16 +80,37 @@ pipeline {
                         if (isUnix()) {
                             sh '''
                                 python_command="${PYTHON:-python3}"
+                                if [ -z "${PYTHON:-}" ] && ! command -v "$python_command" >/dev/null 2>&1; then
+                                    python_command=python
+                                fi
+                                if ! command -v "$python_command" >/dev/null 2>&1; then
+                                    echo 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.' >&2
+                                    exit 1
+                                fi
                                 "$python_command" -m xmlrunner discover -s tests -o reports/unittest
                             '''
                         } else {
                             powershell '''
-                                $python = if ($env:PYTHON -and $env:PYTHON.Trim()) {
-                                    $env:PYTHON
+                                $pythonArgs = @()
+                                if ($env:PYTHON -and $env:PYTHON.Trim()) {
+                                    $pythonCommand = Get-Command -Name $env:PYTHON -CommandType Application -ErrorAction SilentlyContinue
                                 } else {
-                                    'python'
+                                    foreach ($candidate in @('py', 'python3', 'python')) {
+                                        $pythonCommand = Get-Command -Name $candidate -CommandType Application -ErrorAction SilentlyContinue
+                                        if ($pythonCommand) {
+                                            if ($candidate -eq 'py') {
+                                                $pythonArgs = @('-3')
+                                            }
+                                            break
+                                        }
+                                    }
                                 }
-                                & $python -m xmlrunner discover -s tests -o reports/unittest
+                                if (-not $pythonCommand) {
+                                    throw 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.'
+                                }
+                                $python = $pythonCommand.Source
+                                $pythonInvocationArgs = @($pythonArgs) + @('-m', 'xmlrunner', 'discover', '-s', 'tests', '-o', 'reports/unittest')
+                                & $python @pythonInvocationArgs
                                 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                             '''
                         }
@@ -84,16 +126,37 @@ pipeline {
                         if (isUnix()) {
                             sh '''
                                 python_command="${PYTHON:-python3}"
+                                if [ -z "${PYTHON:-}" ] && ! command -v "$python_command" >/dev/null 2>&1; then
+                                    python_command=python
+                                fi
+                                if ! command -v "$python_command" >/dev/null 2>&1; then
+                                    echo 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.' >&2
+                                    exit 1
+                                fi
                                 "$python_command" -m behave features --junit --junit-directory reports/behave
                             '''
                         } else {
                             powershell '''
-                                $python = if ($env:PYTHON -and $env:PYTHON.Trim()) {
-                                    $env:PYTHON
+                                $pythonArgs = @()
+                                if ($env:PYTHON -and $env:PYTHON.Trim()) {
+                                    $pythonCommand = Get-Command -Name $env:PYTHON -CommandType Application -ErrorAction SilentlyContinue
                                 } else {
-                                    'python'
+                                    foreach ($candidate in @('py', 'python3', 'python')) {
+                                        $pythonCommand = Get-Command -Name $candidate -CommandType Application -ErrorAction SilentlyContinue
+                                        if ($pythonCommand) {
+                                            if ($candidate -eq 'py') {
+                                                $pythonArgs = @('-3')
+                                            }
+                                            break
+                                        }
+                                    }
                                 }
-                                & $python -m behave features --junit --junit-directory reports/behave
+                                if (-not $pythonCommand) {
+                                    throw 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.'
+                                }
+                                $python = $pythonCommand.Source
+                                $pythonInvocationArgs = @($pythonArgs) + @('-m', 'behave', 'features', '--junit', '--junit-directory', 'reports/behave')
+                                & $python @pythonInvocationArgs
                                 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                             '''
                         }
@@ -155,6 +218,13 @@ if (\$LASTEXITCODE -ne 0) {
                                 mkdir -p k6/results
                                 k6 version
                                 python_command="\${PYTHON:-python3}"
+                                if [ -z "\${PYTHON:-}" ] && ! command -v "\$python_command" >/dev/null 2>&1; then
+                                    python_command=python
+                                fi
+                                if ! command -v "\$python_command" >/dev/null 2>&1; then
+                                    echo 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.' >&2
+                                    exit 1
+                                fi
                                 "\$python_command" -m http.server 8000 --directory app --bind 127.0.0.1 >/dev/null 2>&1 &
                                 server_pid=\$!
                                 trap 'kill "\\$server_pid" 2>/dev/null || true' EXIT
@@ -189,13 +259,27 @@ if (\$LASTEXITCODE -ne 0) {
                                     throw 'k6 no está instalado o no está disponible en PATH.'
                                 }
 
-                                \$python = if (\$env:PYTHON -and \$env:PYTHON.Trim()) {
-                                    \$env:PYTHON
+                                \$pythonArgs = @()
+                                if (\$env:PYTHON -and \$env:PYTHON.Trim()) {
+                                    \$pythonCommand = Get-Command -Name \$env:PYTHON -CommandType Application -ErrorAction SilentlyContinue
                                 } else {
-                                    'python'
+                                    foreach (\$candidate in @('py', 'python3', 'python')) {
+                                        \$pythonCommand = Get-Command -Name \$candidate -CommandType Application -ErrorAction SilentlyContinue
+                                        if (\$pythonCommand) {
+                                            if (\$candidate -eq 'py') {
+                                                \$pythonArgs = @('-3')
+                                            }
+                                            break
+                                        }
+                                    }
                                 }
+                                if (-not \$pythonCommand) {
+                                    throw 'Python no encontrado. Define el parámetro PYTHON con la ruta completa a python.exe, o instala Python y agrégalo al PATH del servicio Jenkins.'
+                                }
+                                \$python = \$pythonCommand.Source
+                                \$serverArguments = @(\$pythonArgs) + @('-m', 'http.server', '8000', '--directory', 'app', '--bind', '127.0.0.1')
                                 \$server = Start-Process -FilePath \$python `
-                                    -ArgumentList @('-m', 'http.server', '8000', '--directory', 'app', '--bind', '127.0.0.1') `
+                                    -ArgumentList \$serverArguments `
                                     -WorkingDirectory (Get-Location).Path `
                                     -PassThru -WindowStyle Hidden
                                 try {
